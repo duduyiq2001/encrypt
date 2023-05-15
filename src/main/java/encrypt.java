@@ -1,13 +1,18 @@
-import java.sql.Connection;
-import java.sql.DriverManager;
+
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
-
+import javax.sql.DataSource;
+import java.sql.Statement;
+import java.sql.Connection;
+import javax.naming.InitialContext;
 import org.jasypt.util.password.PasswordEncryptor;
 import org.jasypt.util.password.StrongPasswordEncryptor;
+import java.sql.DriverManager;
 
-public class UpdateSecurePassword {
+
+
+public class encrypt {
 
     /*
      * 
@@ -22,21 +27,24 @@ public class UpdateSecurePassword {
      */
     public static void main(String[] args) throws Exception {
 
-        String loginUser = "mytestuser";
-        String loginPasswd = "My6$Password";
+        //DataSource dataSource = (DataSource) new InitialContext().lookup("java:comp/env/jdbc/moviedb");
+        String loginUser = "root";
+        String loginPasswd = "3t1415926";
         String loginUrl = "jdbc:mysql://localhost:3306/moviedb";
 
         Class.forName("com.mysql.jdbc.Driver").newInstance();
-        Connection connection = DriverManager.getConnection(loginUrl, loginUser, loginPasswd);
-        Statement statement = connection.createStatement();
+        try(Connection conn = DriverManager.getConnection(loginUrl, loginUser, loginPasswd);){
+
+        
+        Statement statement = conn.createStatement();
 
         // change the customers table password column from VARCHAR(20) to VARCHAR(128)
-        String alterQuery = "ALTER TABLE customers MODIFY COLUMN password VARCHAR(128)";
+        String alterQuery = "ALTER TABLE employees MODIFY COLUMN password VARCHAR(128)";
         int alterResult = statement.executeUpdate(alterQuery);
-        System.out.println("altering customers table schema completed, " + alterResult + " rows affected");
+        System.out.println("altering employees table schema completed, " + alterResult + " rows affected");
 
         // get the ID and password for each customer
-        String query = "SELECT id, password from customers";
+        String query = "SELECT email,password from employees";
 
         ResultSet rs = statement.executeQuery(query);
 
@@ -49,15 +57,14 @@ public class UpdateSecurePassword {
         System.out.println("encrypting password (this might take a while)");
         while (rs.next()) {
             // get the ID and plain text password from current table
-            String id = rs.getString("id");
+            String email = rs.getString("email");
             String password = rs.getString("password");
             
             // encrypt the password using StrongPasswordEncryptor
             String encryptedPassword = passwordEncryptor.encryptPassword(password);
-
+            System.out.println(query);
             // generate the update query
-            String updateQuery = String.format("UPDATE customers SET password='%s' WHERE id=%s;", encryptedPassword,
-                    id);
+            String updateQuery = String.format("UPDATE employees SET password='%s' WHERE email='%s';", encryptedPassword,email);
             updateQueryList.add(updateQuery);
         }
         rs.close();
@@ -72,8 +79,11 @@ public class UpdateSecurePassword {
         System.out.println("updating password completed, " + count + " rows affected");
 
         statement.close();
-        connection.close();
+        conn.close();
+    }
+    catch(Exception e){
 
+    } 
         System.out.println("finished");
 
     }
